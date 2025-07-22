@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using StaticRustLauncherBackend.Models;
-using StaticRustLauncherBackend.Services;
+using StaticRustLauncherBackend.Repositories;
 
 namespace StaticRustLauncherBackend.Controllers;
 
@@ -8,19 +8,27 @@ namespace StaticRustLauncherBackend.Controllers;
 [Route("api/[controller]")]
 public class StatisticsController : ControllerBase
 {
-    private readonly IMockDataService _mockDataService;
+    private readonly IStatisticsRepository _statisticsRepository;
 
-    public StatisticsController(IMockDataService mockDataService)
+    public StatisticsController(IStatisticsRepository statisticsRepository)
     {
-        _mockDataService = mockDataService;
+        _statisticsRepository = statisticsRepository;
     }
 
     [HttpGet]
-    public ActionResult<StatisticsData> GetStatistics()
+    public async Task<ActionResult<StatisticsData>> GetStatistics()
     {
         try
         {
-            var statistics = _mockDataService.GetStatistics();
+            var statistics = await _statisticsRepository.GetCurrentStatisticsAsync();
+            if (statistics == null)
+            {
+                return Ok(new StatisticsData
+                {
+                    UsersOnline = 0,
+                    ServersCount = 0
+                });
+            }
             return Ok(statistics);
         }
         catch (Exception ex)

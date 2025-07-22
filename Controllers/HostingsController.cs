@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using StaticRustLauncherBackend.Models;
-using StaticRustLauncherBackend.Services;
+using StaticRustLauncherBackend.Repositories;
 
 namespace StaticRustLauncherBackend.Controllers;
 
@@ -8,22 +8,22 @@ namespace StaticRustLauncherBackend.Controllers;
 [Route("api/[controller]")]
 public class HostingsController : ControllerBase
 {
-    private readonly IMockDataService _mockDataService;
+    private readonly IHostingRepository _hostingRepository;
 
-    public HostingsController(IMockDataService mockDataService)
+    public HostingsController(IHostingRepository hostingRepository)
     {
-        _mockDataService = mockDataService;
+        _hostingRepository = hostingRepository;
     }
 
     [HttpGet]
-    public ActionResult<ApiResponse<Hosting>> GetHostings()
+    public async Task<ActionResult<ApiResponse<Hosting>>> GetHostings()
     {
         try
         {
-            var hostings = _mockDataService.GetHostings();
+            var hostings = await _hostingRepository.GetAllAsync();
             return Ok(new ApiResponse<Hosting>
             {
-                Items = hostings,
+                Items = hostings.ToList(),
                 Success = true
             });
         }
@@ -33,6 +33,39 @@ public class HostingsController : ControllerBase
             {
                 Items = new List<Hosting>(),
                 Message = "Ошибка при получении хостингов",
+                Success = false
+            });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ApiResponse<Hosting>>> GetHosting(int id)
+    {
+        try
+        {
+            var hosting = await _hostingRepository.GetByIdAsync(id);
+            if (hosting == null)
+            {
+                return NotFound(new ApiResponse<Hosting>
+                {
+                    Items = new List<Hosting>(),
+                    Message = "Хостинг не найден",
+                    Success = false
+                });
+            }
+
+            return Ok(new ApiResponse<Hosting>
+            {
+                Items = new List<Hosting> { hosting },
+                Success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ApiResponse<Hosting>
+            {
+                Items = new List<Hosting>(),
+                Message = "Ошибка при получении хостинга",
                 Success = false
             });
         }

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using StaticRustLauncherBackend.Models;
-using StaticRustLauncherBackend.Services;
+using StaticRustLauncherBackend.Repositories;
 
 namespace StaticRustLauncherBackend.Controllers;
 
@@ -8,22 +8,22 @@ namespace StaticRustLauncherBackend.Controllers;
 [Route("api/[controller]")]
 public class ServersController : ControllerBase
 {
-    private readonly IMockDataService _mockDataService;
+    private readonly IServerRepository _serverRepository;
 
-    public ServersController(IMockDataService mockDataService)
+    public ServersController(IServerRepository serverRepository)
     {
-        _mockDataService = mockDataService;
+        _serverRepository = serverRepository;
     }
 
     [HttpGet]
-    public ActionResult<ApiResponse<Server>> GetServers()
+    public async Task<ActionResult<ApiResponse<Server>>> GetServers()
     {
         try
         {
-            var servers = _mockDataService.GetServers();
+            var servers = await _serverRepository.GetServersWithUrlsAsync();
             return Ok(new ApiResponse<Server>
             {
-                Items = servers,
+                Items = servers.ToList(),
                 Success = true
             });
         }
@@ -33,6 +33,39 @@ public class ServersController : ControllerBase
             {
                 Items = new List<Server>(),
                 Message = "Ошибка при получении серверов",
+                Success = false
+            });
+        }
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<ApiResponse<Server>>> GetServer(int id)
+    {
+        try
+        {
+            var server = await _serverRepository.GetServerWithUrlsAsync(id);
+            if (server == null)
+            {
+                return NotFound(new ApiResponse<Server>
+                {
+                    Items = new List<Server>(),
+                    Message = "Сервер не найден",
+                    Success = false
+                });
+            }
+
+            return Ok(new ApiResponse<Server>
+            {
+                Items = new List<Server> { server },
+                Success = true
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ApiResponse<Server>
+            {
+                Items = new List<Server>(),
+                Message = "Ошибка при получении сервера",
                 Success = false
             });
         }

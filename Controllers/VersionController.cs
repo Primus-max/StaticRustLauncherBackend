@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using StaticRustLauncherBackend.Models;
-using StaticRustLauncherBackend.Services;
+using StaticRustLauncherBackend.Repositories;
 
 namespace StaticRustLauncherBackend.Controllers;
 
@@ -8,19 +8,23 @@ namespace StaticRustLauncherBackend.Controllers;
 [Route("api/[controller]")]
 public class VersionController : ControllerBase
 {
-    private readonly IMockDataService _mockDataService;
+    private readonly IVersionInfoRepository _versionInfoRepository;
 
-    public VersionController(IMockDataService mockDataService)
+    public VersionController(IVersionInfoRepository versionInfoRepository)
     {
-        _mockDataService = mockDataService;
+        _versionInfoRepository = versionInfoRepository;
     }
 
     [HttpGet]
-    public ActionResult<VersionInfo> GetVersionInfo()
+    public async Task<ActionResult<VersionInfo>> GetVersionInfo()
     {
         try
         {
-            var versionInfo = _mockDataService.GetVersionInfo();
+            var versionInfo = await _versionInfoRepository.GetVersionInfoWithSftpAsync();
+            if (versionInfo == null)
+            {
+                return Ok(new VersionInfo());
+            }
             return Ok(versionInfo);
         }
         catch (Exception ex)
@@ -30,11 +34,11 @@ public class VersionController : ControllerBase
     }
 
     [HttpGet("client")]
-    public ActionResult<string> GetClientVersion()
+    public async Task<ActionResult<string>> GetClientVersion()
     {
         try
         {
-            var clientVersion = _mockDataService.GetClientVersion();
+            var clientVersion = await _versionInfoRepository.GetCurrentClientVersionAsync();
             return Ok(clientVersion);
         }
         catch (Exception ex)
